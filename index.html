@@ -9,15 +9,18 @@
 <body>
 
 <main class="seite">
+
   <section class="rad-spalte">
 
     <div class="rad-huelle">
       <svg id="rad" viewBox="0 0 400 400" role="img" aria-labelledby="rad-titel">
         <title id="rad-titel">Glücksrad. Jedes Segment wächst nach außen, je öfter es gezogen wurde.</title>
 
+        <g id="segmente"></g>
+
+        <circle id="kreis-unterlage" cx="200" cy="200" r="124" fill="none" />
         <circle id="erwartungskreis" cx="200" cy="200" r="124"
                 fill="none" stroke-dasharray="3 5" />
-        <g id="segmente"></g>
 
         <circle cx="200" cy="200" r="17" class="nabe" />
       </svg>
@@ -35,6 +38,7 @@
     </p>
 
   </section>
+
   <section class="seiten-spalte">
 
     <header class="kopf">
@@ -46,6 +50,13 @@
 
     <section class="block">
       <h2>Optionen</h2>
+
+      <div class="listen-zeile">
+        <label class="versteckt" for="listen-wahl">Liste wählen</label>
+        <select id="listen-wahl"></select>
+        <button type="button" id="liste-neu" class="knopf-klein">Neu</button>
+        <button type="button" id="liste-weg" class="knopf-klein">Löschen</button>
+      </div>
 
       <div class="eingabe-zeile">
         <label class="versteckt" for="feld-einzeln">Neue Option</label>
