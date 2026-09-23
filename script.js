@@ -1,16 +1,18 @@
 const KONFIG = {
-  drehdauerMs: 4200,
-  umdrehungen: 5,
-  radiusRef: 124,
-  radiusMin: 46,
-  radiusMax: 178,
+  drehdauerMs: 4200, 
+  umdrehungen: 5,     
+  radiusRef: 124,     
+  radiusMin: 46,      
+  radiusMax: 178,   
   minWinkelFuerText: 12,
-  verlaufLaenge: 40
+  verlaufLaenge: 40,
+
+  gewichtMin: 1,   
+  gewichtMax: 9  
 };
 
-const MITTE = 200;
+const MITTE = 200;         
 const SPEICHER = "bluete-daten";
-
 
 const svgSegmente   = document.getElementById("segmente");
 const elErgebnis    = document.getElementById("ergebnis");
@@ -23,17 +25,19 @@ const elZaehler     = document.getElementById("zaehler");
 const elTabelle     = document.getElementById("tabelle");
 const elTabKoerper  = document.getElementById("tabelle-koerper");
 const elVerlauf     = document.getElementById("verlauf");
+const elListenWahl  = document.getElementById("listen-wahl");
+const elListeNeu    = document.getElementById("liste-neu");
+const elListeWeg    = document.getElementById("liste-weg");
 
-
-let optionen = [];
-let verlauf  = [];
-let drehung  = 0;
+let optionen = [];    
+let verlauf  = [];  
+let drehung  = 0;   
 let dreht    = false;
 let naechsteId = 1;
 
 function farbeFuer(index) {
   const ton = (index * 137.5 + 18) % 360;
-  const saettigung = 52 + (index % 2) * 7;
+  const saettigung = 52 + (index % 2) * 7;  
   const helligkeit = 54 - (index % 3) * 3;
   return `hsl(${ton.toFixed(1)} ${saettigung}% ${helligkeit}%)`;
 }
@@ -65,29 +69,38 @@ function segmentPfad(vonGrad, bisGrad, aussen) {
   ].join(" ");
 }
 
-function radiusFuer(treffer, gesamt, anzahlOptionen) {
-  if (gesamt === 0) return KONFIG.radiusRef;
+function radiusFuer(treffer, gesamt, anteil) {
+  if (gesamt === 0 || anteil <= 0) return KONFIG.radiusRef;
 
-  const erwartet = gesamt / anzahlOptionen;
+  const erwartet = gesamt * anteil;
   const verhaeltnis = treffer / erwartet;
   const roh = KONFIG.radiusRef * Math.sqrt(verhaeltnis);
 
   return Math.max(KONFIG.radiusMin, Math.min(KONFIG.radiusMax, roh));
 }
 
+function anteile() {
+  const summe = optionen.reduce((s, o) => s + (o.gewicht || 1), 0);
+  return optionen.map(o => (o.gewicht || 1) / summe);
+}
+
 function radZeichnen() {
   svgSegmente.innerHTML = "";
   if (optionen.length === 0) return;
 
-  const n = optionen.length;
-  const schritt = 360 / n;
   const gesamt = optionen.reduce((s, o) => s + o.treffer, 0);
-  const zeigtText = schritt >= KONFIG.minWinkelFuerText;
+  const teile = anteile();
+
+  let winkelZeiger = 0;
 
   optionen.forEach((option, i) => {
-    const von = i * schritt;
+    const schritt = teile[i] * 360;
+    const von = winkelZeiger;
     const bis = von + schritt;
-    const aussen = radiusFuer(option.treffer, gesamt, n);
+    winkelZeiger = bis;
+
+    const zeigtText = schritt >= KONFIG.minWinkelFuerText;
+    const aussen = radiusFuer(option.treffer, gesamt, teile[i]);
 
     const pfad = document.createElementNS("http://www.w3.org/2000/svg", "path");
     pfad.setAttribute("d", segmentPfad(von, bis, aussen));
@@ -136,11 +149,20 @@ function drehen() {
   svgSegmente.classList.remove("dimmen");
   svgSegmente.querySelectorAll(".gewinner").forEach(el => el.classList.remove("gewinner"));
 
-  const index = Math.floor(Math.random() * optionen.length);
+  const teile = anteile();
+  const wurf = Math.random();
+  let summe = 0;
+  let index = optionen.length - 1;   
+  for (let i = 0; i < teile.length; i++) {
+    summe += teile[i];
+    if (wurf < summe) { index = i; break; }
+  }
   const gewinner = optionen[index];
 
-  const schritt = 360 / optionen.length;
-  const mitteWinkel = index * schritt + schritt / 2;
+  let von = 0;
+  for (let i = 0; i < index; i++) von += teile[i] * 360;
+  const schritt = teile[index] * 360;
+  const mitteWinkel = von + schritt / 2;
 
   const versatz = (Math.random() - 0.5) * schritt * 0.7;
 
@@ -160,7 +182,7 @@ function drehen() {
     elErgebnis.textContent = gewinner.name;
     elErgebnis.classList.remove("leer");
 
-    radZeichnen();
+    radZeichnen();  
     hervorheben(gewinner.id);
     statistikZeichnen();
     verlaufZeichnen();
@@ -178,14 +200,25 @@ function hervorheben(id) {
   svgSegmente.classList.add("dimmen");
 }
 
+
 function optionHinzufuegen(rohName) {
   const name = rohName.trim().replace(/\s+/g, " ");
   if (!name) return false;
 
   if (optionen.some(o => o.name.toLowerCase() === name.toLowerCase())) return false;
 
-  optionen.push({ id: naechsteId++, name, treffer: 0 });
+  optionen.push({ id: naechsteId++, name, treffer: 0, gewicht: 1 });
   return true;
+}
+
+function gewichtAendern(id, richtung) {
+  const option = optionen.find(o => o.id === id);
+  if (!option) return;
+  const neu = (option.gewicht || 1) + richtung;
+  if (neu < KONFIG.gewichtMin || neu > KONFIG.gewichtMax) return;
+  option.gewicht = neu;
+  allesZeichnen();
+  speichern();
 }
 
 function optionEntfernen(id) {
@@ -215,6 +248,7 @@ function mehrereUebernehmen() {
   }
 }
 
+
 function chipsZeichnen() {
   elChips.innerHTML = "";
 
@@ -230,6 +264,29 @@ function chipsZeichnen() {
     text.textContent = `${i + 1}. ${option.name}`;
     text.title = option.name;
 
+    const gewicht = option.gewicht || 1;
+
+    const runter = document.createElement("button");
+    runter.type = "button";
+    runter.className = "chip-gewicht";
+    runter.textContent = "−";
+    runter.disabled = gewicht <= KONFIG.gewichtMin;
+    runter.setAttribute("aria-label", `${option.name} seltener`);
+    runter.addEventListener("click", () => gewichtAendern(option.id, -1));
+
+    const anzeige = document.createElement("span");
+    anzeige.className = "chip-wert" + (gewicht === 1 ? " eins" : "");
+    anzeige.textContent = "×" + gewicht;
+    anzeige.title = `Gewicht ${gewicht} — bestimmt Segmentgröße und Chance`;
+
+    const hoch = document.createElement("button");
+    hoch.type = "button";
+    hoch.className = "chip-gewicht";
+    hoch.textContent = "+";
+    hoch.disabled = gewicht >= KONFIG.gewichtMax;
+    hoch.setAttribute("aria-label", `${option.name} häufiger`);
+    hoch.addEventListener("click", () => gewichtAendern(option.id, 1));
+
     const weg = document.createElement("button");
     weg.type = "button";
     weg.className = "chip-weg";
@@ -237,15 +294,14 @@ function chipsZeichnen() {
     weg.setAttribute("aria-label", `${option.name} entfernen`);
     weg.addEventListener("click", () => optionEntfernen(option.id));
 
-    li.append(punktEl, text, weg);
+    li.append(punktEl, text, runter, anzeige, hoch, weg);
     elChips.appendChild(li);
   });
 
   elAnzahl.textContent = optionen.length === 1
     ? "1 Option"
     : `${optionen.length} Optionen`;
-
-elDrehen.disabled = optionen.length < 2 || dreht;
+  elDrehen.disabled = optionen.length < 2 || dreht;
 }
 
 function statistikZeichnen() {
@@ -263,11 +319,12 @@ function statistikZeichnen() {
     ? "1 Dreh aufgezeichnet."
     : `${gesamt} Drehs aufgezeichnet.`;
 
-  const erwartetAnteil = 100 / optionen.length;
+  const teile = anteile();
   elTabKoerper.innerHTML = "";
 
   optionen.forEach((option, i) => {
     const anteil = (option.treffer / gesamt) * 100;
+    const erwartetAnteil = teile[i] * 100;
     const abw = anteil - erwartetAnteil;
 
     const tr = document.createElement("tr");
@@ -329,11 +386,74 @@ function allesZeichnen() {
   verlaufZeichnen();
 }
 
-function speichern() {
+
+let listen = {};         
+let aktiveListe = "Meine Liste";
+
+function alleSpeichern() {
   try {
-    localStorage.setItem(SPEICHER, JSON.stringify({ optionen, verlauf, naechsteId }));
+    localStorage.setItem(SPEICHER, JSON.stringify({ aktiv: aktiveListe, listen }));
   } catch {
   }
+}
+
+function speichern() {
+  listen[aktiveListe] = { optionen, verlauf, naechsteId };
+  alleSpeichern();
+}
+
+function listeOeffnen(name) {
+  if (!listen[name]) return;
+  aktiveListe = name;
+  const daten = listen[name];
+  optionen = Array.isArray(daten.optionen) ? daten.optionen : [];
+  verlauf = Array.isArray(daten.verlauf) ? daten.verlauf : [];
+  naechsteId = daten.naechsteId || optionen.length + 1;
+
+  elErgebnis.textContent = "Noch nicht gedreht";
+  elErgebnis.classList.add("leer");
+  svgSegmente.classList.remove("dimmen");
+
+  alleSpeichern();
+  allesZeichnen();
+}
+
+function listenZeichnen() {
+  elListenWahl.innerHTML = "";
+  Object.keys(listen).sort((a, b) => a.localeCompare(b, "de")).forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    opt.selected = name === aktiveListe;
+    elListenWahl.appendChild(opt);
+  });
+  elListeWeg.disabled = Object.keys(listen).length < 2;
+}
+
+function listeAnlegen() {
+  const vorschlag = "Liste " + (Object.keys(listen).length + 1);
+  const name = (prompt("Name der neuen Liste:", vorschlag) || "").trim();
+  if (!name) return;
+
+  if (listen[name]) {
+    alert("Eine Liste mit diesem Namen gibt es schon.");
+    return;
+  }
+
+  speichern();                
+  listen[name] = { optionen: [], verlauf: [], naechsteId: 1 };
+  listeOeffnen(name);
+  listenZeichnen();
+  feldEinzeln.focus();
+}
+
+function listeLoeschen() {
+  if (Object.keys(listen).length < 2) return;
+  if (!confirm(`Liste „${aktiveListe}" mit allen Optionen und der Auswertung löschen?`)) return;
+
+  delete listen[aktiveListe];
+  listeOeffnen(Object.keys(listen)[0]);
+  listenZeichnen();
 }
 
 function laden() {
@@ -341,12 +461,28 @@ function laden() {
     const roh = localStorage.getItem(SPEICHER);
     if (!roh) return false;
     const daten = JSON.parse(roh);
-    if (!Array.isArray(daten.optionen) || daten.optionen.length === 0) return false;
 
-    optionen = daten.optionen;
-    verlauf = Array.isArray(daten.verlauf) ? daten.verlauf : [];
-    naechsteId = daten.naechsteId || optionen.length + 1;
-    return true;
+    if (daten.listen && typeof daten.listen === "object") {
+      listen = daten.listen;
+      const namen = Object.keys(listen);
+      if (namen.length === 0) return false;
+      aktiveListe = listen[daten.aktiv] ? daten.aktiv : namen[0];
+      const l = listen[aktiveListe];
+      optionen = Array.isArray(l.optionen) ? l.optionen : [];
+      verlauf = Array.isArray(l.verlauf) ? l.verlauf : [];
+      naechsteId = l.naechsteId || optionen.length + 1;
+      return optionen.length > 0;
+    }
+    if (Array.isArray(daten.optionen) && daten.optionen.length > 0) {
+      optionen = daten.optionen;
+      verlauf = Array.isArray(daten.verlauf) ? daten.verlauf : [];
+      naechsteId = daten.naechsteId || optionen.length + 1;
+      listen = { [aktiveListe]: { optionen, verlauf, naechsteId } };
+      alleSpeichern();
+      return true;
+    }
+
+    return false;
   } catch {
     return false;
   }
@@ -367,9 +503,17 @@ function zuruecksetzen() {
   elErgebnis.classList.add("leer");
   svgSegmente.classList.remove("dimmen");
 
-  allesZeichnen();
+  allesZeichnen();  
   speichern();
 }
+
+
+elListenWahl.addEventListener("change", () => {
+  speichern();               
+  listeOeffnen(elListenWahl.value);
+});
+elListeNeu.addEventListener("click", listeAnlegen);
+elListeWeg.addEventListener("click", listeLoeschen);
 
 document.getElementById("hinzufuegen").addEventListener("click", einzelnUebernehmen);
 document.getElementById("uebernehmen").addEventListener("click", mehrereUebernehmen);
@@ -381,7 +525,7 @@ document.getElementById("alle-loeschen").addEventListener("click", () => {
   elErgebnis.textContent = "Noch nicht gedreht";
   elErgebnis.classList.add("leer");
   allesZeichnen();
-  speichern();
+  speichern();   
 });
 document.getElementById("zuruecksetzen").addEventListener("click", zuruecksetzen);
 elDrehen.addEventListener("click", drehen);
@@ -392,7 +536,11 @@ feldEinzeln.addEventListener("keydown", e => {
 
 if (!laden()) {
   ["Option A", "Option B", "Option C", "Option D"].forEach(n => optionHinzufuegen(n));
+  listen[aktiveListe] = { optionen, verlauf, naechsteId };
+  alleSpeichern();
 }
+
+listenZeichnen();
 
 elErgebnis.classList.add("leer");
 allesZeichnen();
