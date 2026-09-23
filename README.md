@@ -13,15 +13,38 @@ Nach zwanzig Drehs ist aus dem Kreis eine unregelmäßige Blüte geworden.
 Das Rad ist gleichzeitig seine eigene Statistik. Ein separates Balkendiagramm
 daneben brauchte es deshalb nicht.
 
-Wichtig dabei: Die **Winkel** aller Segmente bleiben immer gleich groß. Bei acht
-Optionen bekommt jede genau 45 Grad, egal wie oft sie schon dran war. Getroffen
-wird nur über den Winkel — der Radius ist reine Anzeige. Das Rad sieht also
-schief aus, ist aber komplett fair.
+Wichtig dabei: Der **Winkel** eines Segments ändert sich nie durch Treffer. Bei
+acht gleich gewichteten Optionen bekommt jede genau 45 Grad, egal wie oft sie
+schon dran war. Gezogen wird allein über den Winkel — der Radius ist reine
+Anzeige. Das Rad sieht also schief aus, ist aber nicht verzerrt.
 
-Der gestrichelte Kreis markiert den Radius, den ein Segment bei perfekt
-gleichmäßiger Verteilung hätte. Bei wenigen Drehs zackt die Form wild darum
+Der gestrichelte Kreis markiert den Radius, den ein Segment bei
+erwartungsgemäßer Verteilung hätte. Bei wenigen Drehs zackt die Form wild darum
 herum, mit mehr Drehs legt sie sich näher an den Kreis an. Man sieht dem Rad
 also beim Ausgleichen zu.
+
+## Gewichtete Optionen
+
+Über zwei kleine Knöpfe lässt sich jede Option von Gewicht 1 bis 9 stellen. Eine
+dreifach gewichtete Option bekommt ein dreimal so breites Segment und
+entsprechend die dreifache Chance.
+
+Das klang zunächst nach einem Widerspruch zur Grundidee: Wenn die Segmente nicht
+mehr gleich breit sind, steht der Radius dann überhaupt noch für dasselbe?
+
+Er tut es, wenn man die Erwartung richtig rechnet. Nicht „Gesamtzahl geteilt
+durch Anzahl der Optionen", sondern „Gesamtzahl mal eigener Anteil". Damit bleibt
+ein einziger Kreis für alle richtig: Jedes Segment liegt darauf, wenn es seiner
+eigenen Erwartung entspricht. Eine dreifach gewichtete Option braucht dafür eben
+dreimal so viele Treffer wie eine einfache.
+
+Winkel und Ziehung werden aus derselben Zahl berechnet. So können sie nicht
+auseinanderlaufen.
+
+## Mehrere Listen
+
+Über der Eingabe lassen sich benannte Listen anlegen und wechseln. Jede behält
+ihre eigenen Optionen samt Gewichten, ihren Verlauf und ihre Zählung.
 
 ## Was ich beim Bauen gelernt habe
 
@@ -50,8 +73,8 @@ Wird ein Segment schmaler als zwölf Grad, passt kein Text mehr hinein. Dann
 zeigt es nur noch seine Nummer, die zur Liste daneben gehört. Unlesbar kleine
 Schrift fand ich schlechter als gar keine.
 
-Optionen und Auswertung bleiben im Browser gespeichert. Der Zurücksetzen-Knopf
-löscht nur die Zählung, die Optionen bleiben stehen.
+Alle Listen bleiben im Browser gespeichert. Der Zurücksetzen-Knopf löscht nur
+die Zählung der aktuellen Liste, die Optionen bleiben stehen.
 
 ## Was drin steckt
 
@@ -77,7 +100,6 @@ Umdrehungen und die Größe des Erwartungskreises verstellen.
 
 ## Was noch offen ist
 
-- Die Auswertung liegt nur im eigenen Browser
-- Gewichtete Optionen, bei denen manche wahrscheinlicher sind, wären der
-  nächste logische Schritt — dann müssten die Winkel allerdings doch
-  unterschiedlich groß werden
+- Die Auswertung liegt nur im eigenen Browser, ein gemeinsamer Stand für
+  mehrere Personen bräuchte einen Server
+- Listen lassen sich nicht umbenennen, nur anlegen und löschen
